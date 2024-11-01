@@ -1,11 +1,10 @@
 """
-Command Line Interface for Mochi Cards
+Simplified Command Line Interface for Mochi Cards
 """
 import os
 import click
-import json
+from typing import Optional, List, Dict
 from .api import MochiAPI
-from typing import Optional
 
 def get_api() -> MochiAPI:
     """Get API client instance."""
@@ -17,190 +16,108 @@ def get_api() -> MochiAPI:
         )
     return MochiAPI(api_key)
 
-def format_output(data: dict) -> str:
-    """Format dictionary output as pretty JSON."""
-    return json.dumps(data, indent=2)
+def select_deck(api: MochiAPI) -> str:
+    """Interactive deck selection."""
+    decks = api.list_decks()['docs']
+    if not decks:
+        raise click.ClickException("No decks found. Create one first with 'mochi deck new'")
+    
+    click.echo("\nAvailable decks:")
+    for idx, deck in enumerate(decks, 1):
+        click.echo(f"{idx}. {deck['name']}")
+    
+    while True:
+        choice = click.prompt("\nSelect deck number", type=int)
+        if 1 <= choice <= len(decks):
+            return decks[choice-1]['id']
+        click.echo("Invalid choice. Please try again.")
 
 @click.group()
 def cli():
-    """Mochi Cards CLI - Manage your flashcards from the command line."""
+    """Mochi Cards CLI - Your flashcards in the terminal"""
     pass
 
-# Deck commands
-@cli.group()
-def decks():
-    """Manage decks."""
+# Simplified deck commands
+@cli.group(name='deck')
+def deck_cmd():
+    """Manage your decks"""
     pass
 
-@decks.command(name='list')
-@click.option('--bookmark', help='Pagination bookmark')
-def list_decks(bookmark: Optional[str]):
-    """List all decks."""
+@deck_cmd.command(name='list')
+def list_decks():
+    """List all your decks"""
     try:
-        result = get_api().list_decks(bookmark=bookmark)
-        click.echo(format_output(result))
+        decks = get_api().list_decks()['docs']
+        if not decks:
+            click.echo("No decks found")
+            return
+        
+        click.echo("\nYour Decks:")
+        for deck in decks:
+            click.echo(f"• {deck['name']}")
     except Exception as e:
         raise click.ClickException(str(e))
 
-@decks.command(name='create')
+@deck_cmd.command(name='new')
 @click.argument('name')
-@click.option('--parent-id', help='Parent deck ID')
-@click.option('--sort', type=int, help='Sort order')
-@click.option('--archived/--not-archived', default=False, help='Whether the deck is archived')
-@click.option('--show-sides/--hide-sides', default=True, help='Show both sides of cards')
-@click.option('--sort-by', 
-    type=click.Choice(['none', 'lexicographically', 'created-at', 'updated-at', 'retention-rate-asc', 'interval-length']),
-    default='lexicographically',
-    help='How to sort cards')
-@click.option('--cards-view',
-    type=click.Choice(['list', 'grid', 'note', 'column']),
-    default='list',
-    help='How to display cards')
-@click.option('--review-reverse/--no-review-reverse', default=False, help='Enable reverse review')
-def create_deck(name, parent_id, sort, archived, show_sides, sort_by, cards_view, review_reverse):
-    """Create a new deck."""
+@click.option('--desc', '-d', help='Deck description')
+def create_deck(name: str, desc: Optional[str]):
+    """Create a new deck"""
     try:
-        result = get_api().create_deck(
-            name=name,
-            parent_id=parent_id,
-            sort=sort,
-            archived=archived,
-            show_sides=show_sides,
-            sort_by=sort_by,
-            cards_view=cards_view,
-            review_reverse=review_reverse
-        )
-        click.echo(format_output(result))
+        deck = get_api().create_deck(name=name, description=desc or "")
+        click.echo(f"Created deck: {deck['name']}")
     except Exception as e:
         raise click.ClickException(str(e))
 
-@decks.command(name='get')
-@click.argument('deck_id')
-def get_deck(deck_id):
-    """Get details of a specific deck."""
-    try:
-        result = get_api().get_deck(deck_id)
-        click.echo(format_output(result))
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-@decks.command(name='delete')
-@click.argument('deck_id')
-@click.confirmation_option(prompt='Are you sure you want to delete this deck?')
-def delete_deck(deck_id):
-    """Delete a deck."""
-    try:
-        get_api().delete_deck(deck_id)
-        click.echo(f"Deck {deck_id} deleted successfully.")
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-# Card commands
-@cli.group()
-def cards():
-    """Manage cards."""
+# Simplified card commands
+@cli.group(name='card')
+def card_cmd():
+    """Manage your cards"""
     pass
 
-@cards.command(name='list')
-@click.option('--deck-id', help='Filter by deck ID')
-@click.option('--bookmark', help='Pagination bookmark')
-@click.option('--limit', type=int, help='Number of cards to return')
-def list_cards(deck_id, bookmark, limit):
-    """List cards, optionally filtered by deck."""
+@card_cmd.command(name='add')
+@click.option('--deck-id', help='Deck ID (if not provided, will show deck selection)')
+def add_card(deck_id: Optional[str]):
+    """Add a new card (interactive)"""
     try:
-        result = get_api().list_cards(deck_id=deck_id, bookmark=bookmark, limit=limit)
-        click.echo(format_output(result))
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-@cards.command(name='create')
-@click.option('--deck-id', required=True, help='ID of the deck to add the card to')
-@click.option('--front', prompt=True, help='Front side of the card')
-@click.option('--back', prompt=True, help='Back side of the card')
-@click.option('--template-id', help='Template ID to use')
-@click.option('--archived/--not-archived', default=False, help='Whether the card is archived')
-@click.option('--review-reverse/--no-review-reverse', default=False, help='Enable reverse review')
-def create_card(deck_id, front, back, template_id, archived, review_reverse):
-    """Create a new card."""
-    try:
-        # Format content as a simple two-sided card
-        content = f"# {front}\n---\n{back}"
-        result = get_api().create_card(
+        api = get_api()
+        
+        # Get deck ID through selection if not provided
+        if not deck_id:
+            deck_id = select_deck(api)
+        
+        # Get card content
+        front = click.prompt("Front of card")
+        back = click.prompt("Back of card")
+        
+        # Create the card
+        card = api.create_card(
             deck_id=deck_id,
-            content=content,
-            template_id=template_id,
-            archived=archived,
-            review_reverse=review_reverse
+            content=f"# {front}\n---\n{back}"
         )
-        click.echo(format_output(result))
+        
+        click.echo("\n✨ Card created successfully!")
+        click.echo(f"Front: {front}")
+        click.echo(f"Back: {back}")
+    
     except Exception as e:
         raise click.ClickException(str(e))
 
-@cards.command(name='get')
-@click.argument('card_id')
-def get_card(card_id):
-    """Get details of a specific card."""
+@card_cmd.command(name='list')
+@click.option('--deck-id', help='Deck ID (if not provided, will show deck selection)')
+def list_cards(deck_id: Optional[str]):
+    """List cards in a deck"""
     try:
-        result = get_api().get_card(card_id)
-        click.echo(format_output(result))
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-@cards.command(name='delete')
-@click.argument('card_id')
-@click.confirmation_option(prompt='Are you sure you want to delete this card?')
-def delete_card(card_id):
-    """Delete a card."""
-    try:
-        get_api().delete_card(card_id)
-        click.echo(f"Card {card_id} deleted successfully.")
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-@cards.command(name='attach')
-@click.argument('card_id')
-@click.argument('file_path', type=click.Path(exists=True))
-def add_attachment(card_id, file_path):
-    """Add an attachment to a card."""
-    try:
-        result = get_api().add_attachment(card_id, file_path)
-        click.echo(format_output(result))
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-# Template commands
-@cli.group()
-def templates():
-    """Manage templates."""
-    pass
-
-@templates.command(name='list')
-@click.option('--bookmark', help='Pagination bookmark')
-def list_templates(bookmark):
-    """List all templates."""
-    try:
-        result = get_api().list_templates(bookmark=bookmark)
-        click.echo(format_output(result))
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-@templates.command(name='get')
-@click.argument('template_id')
-def get_template(template_id):
-    """Get details of a specific template."""
-    try:
-        result = get_api().get_template(template_id)
-        click.echo(format_output(result))
-    except Exception as e:
-        raise click.ClickException(str(e))
-
-def main():
-    """Main entry point for the CLI."""
-    try:
-        cli()
-    except Exception as e:
-        click.echo(f"Error: {str(e)}", err=True)
-        exit(1)
-
-if __name__ == '__main__':
-    main()
+        api = get_api()
+        
+        # Get deck ID through selection if not provided
+        if not deck_id:
+            deck_id = select_deck(api)
+        
+        cards = api.list_cards(deck_id=deck_id)['docs']
+        if not cards:
+            click.echo("No cards found in this deck")
+            return
+        
+        click.echo("\nCards in deck:")
+        for card in cards:

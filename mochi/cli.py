@@ -121,3 +121,22 @@ def list_cards(deck_id: Optional[str]):
         
         click.echo("\nCards in deck:")
         for card in cards:
+            # Extract front content (everything before ---)
+            content = card['content'].split('---')[0].strip()
+            if content.startswith('# '):
+                content = content[2:]  # Remove Markdown header
+            click.echo(f"• {content}")
+    
+    except Exception as e:
+        raise click.ClickException(str(e))
+
+def main():
+    """Main entry point for the CLI."""
+    try:
+        cli()
+    except Exception as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        exit(1)
+
+if __name__ == '__main__':
+    main()

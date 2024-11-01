@@ -1,59 +1,76 @@
 # Mochi CLI
 
-A command-line interface for interacting with the Mochi Cards API.
+A command-line interface for managing your Mochi Cards flashcards.
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/mochi-cli.git
+git clone https://github.com/kirpnlbr/mochi-cli.git
 cd mochi-cli
 ```
 
-2. Create and activate a virtual environment:
-```bash
-python -m venv .venv
-source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
-```
-
-3. Install the package in development mode:
+2. Install the package:
 ```bash
 pip install -e .
 ```
 
-4. Set up your environment:
+3. Set up your Mochi API key:
 ```bash
-cp .env.example .env
-# Edit .env and add your Mochi API key
+export MOCHI_API_KEY=your_api_key_here
 ```
 
 ## Usage
 
-Basic commands:
+### Deck Management
 
+List all decks:
 ```bash
-# List all decks
-mochi decks list
+mochi deck list
+```
 
-# Create a new deck
-mochi decks create "My New Deck" --description "Description"
+Create a new deck:
+```bash
+mochi deck new "My Deck Name"
+```
 
-# Create a card
-mochi cards create --deck-id <deck_id> --front "Front text" --back "Back text"
+### Card Management
+
+Add a new card (interactive):
+```bash
+mochi card add
+```
+This will:
+1. Show you a list of your decks to choose from
+2. Prompt for the front text
+3. Prompt for the back text
+
+List cards in a deck:
+```bash
+mochi card list
 ```
 
 ## Development
 
-1. Install development dependencies:
+1. Create a virtual environment:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows, use `.venv\Scripts\activate`
+```
+
+2. Install development dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Run tests:
-```bash
-pytest
-```
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT
+This project is licensed under the MIT License.

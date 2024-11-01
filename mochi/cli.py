@@ -1,6 +1,3 @@
-"""
-Simplified Command Line Interface for Mochi Cards
-"""
 import os
 import click
 from typing import Optional, List, Dict
@@ -17,7 +14,6 @@ def get_api() -> MochiAPI:
     return MochiAPI(api_key)
 
 def select_deck(api: MochiAPI) -> str:
-    """Interactive deck selection."""
     decks = api.list_decks()['docs']
     if not decks:
         raise click.ClickException("No decks found. Create one first with 'mochi deck new'")
@@ -34,18 +30,15 @@ def select_deck(api: MochiAPI) -> str:
 
 @click.group()
 def cli():
-    """Mochi Cards CLI - Your flashcards in the terminal"""
     pass
 
 # Simplified deck commands
 @cli.group(name='deck')
 def deck_cmd():
-    """Manage your decks"""
     pass
 
 @deck_cmd.command(name='list')
 def list_decks():
-    """List all your decks"""
     try:
         decks = get_api().list_decks()['docs']
         if not decks:
@@ -60,11 +53,9 @@ def list_decks():
 
 @deck_cmd.command(name='new')
 @click.argument('name')
-@click.option('--desc', '-d', help='Deck description')
-def create_deck(name: str, desc: Optional[str]):
-    """Create a new deck"""
+def create_deck(name: str):
     try:
-        deck = get_api().create_deck(name=name, description=desc or "")
+        deck = get_api().create_deck(name=name)
         click.echo(f"Created deck: {deck['name']}")
     except Exception as e:
         raise click.ClickException(str(e))
@@ -72,13 +63,11 @@ def create_deck(name: str, desc: Optional[str]):
 # Simplified card commands
 @cli.group(name='card')
 def card_cmd():
-    """Manage your cards"""
     pass
 
 @card_cmd.command(name='add')
 @click.option('--deck-id', help='Deck ID (if not provided, will show deck selection)')
 def add_card(deck_id: Optional[str]):
-    """Add a new card (interactive)"""
     try:
         api = get_api()
         

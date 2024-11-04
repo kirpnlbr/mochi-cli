@@ -75,7 +75,6 @@ def add_card(deck_id: Optional[str]):
         cards_added = 0
         
         while True:
-            click.clear()
             
             if cards_added > 0:
                 click.echo(f"\n✨ Cards added so far: {cards_added}\n")
